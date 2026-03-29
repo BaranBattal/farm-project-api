@@ -16,7 +16,7 @@ const userRoute = require(`${__dirname}/routes/userRoute`);
 app.use("/crop", cropRoute);
 app.use("/farmActivity", farmActivityRoute);
 app.use("/farm", farmRoute);
-app.use("/goods", goodsRoute);
+app.use("/good", goodsRoute);
 app.use("/order", orderRoute);
 app.use("/user", userRoute);
 

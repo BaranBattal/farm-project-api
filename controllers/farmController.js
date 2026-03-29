@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Farm = require(`${__dirname}/../models/farm`);
 const User = require(`${__dirname}/../models/user`);
 
-exports.add = async (req, res) => {
+exports.addFarm = async (req, res) => {
   try {
     const { name, farmer, location, size, soil_type } = req.body;
 
@@ -32,7 +32,7 @@ exports.add = async (req, res) => {
       farmer: farmer,
       location: {
         lat: location.lat,
-        lng: location.lng,
+        lon: location.lon,
       },
       size: size,
       soil_type: soil_type || "red Mediterranean soil",
@@ -45,7 +45,7 @@ exports.add = async (req, res) => {
   }
 };
 
-exports.modify = async (req, res) => {
+exports.modifyFarm = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -59,7 +59,9 @@ exports.modify = async (req, res) => {
     if (!farm) {
       return res.status(404).send("No such farm");
     }
-
+    if (farm.farmer.toString() !== req.user.id) {
+      return res.status(400).send("Access denied!");
+    }
     if (size !== undefined && size <= 0) {
       return res.status(400).send("Farm size must be greater than zero");
     }
@@ -68,10 +70,9 @@ exports.modify = async (req, res) => {
       { _id: id },
       {
         name: name || farm.name,
-        farmer: farmer || farm.farmer,
         location: {
           lat: location && location.lat !== undefined ? location.lat : farm.location?.lat,
-          lng: location && location.lng !== undefined ? location.lng : farm.location?.lng,
+          lon: location && location.lon !== undefined ? location.lon : farm.location?.lon,
         },
         size: size !== undefined ? size : farm.size,
         soil_type: soil_type || farm.soil_type,
@@ -99,7 +100,7 @@ exports.getByID = async (req, res) => {
       return res.status(404).send("No such farm");
     }
 
-    if (farm.farmer != req.user.id) {
+    if (farm.farmer.toString() != req.user.id) {
       return res.status(400).send("Access danied!");
     }
     res.send(farm);
@@ -111,20 +112,12 @@ exports.getByID = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const { farmer } = req.params;
-
-    if (!farmer) {
-      return res.status(400).send("Invalid parameters");
-    }
-    if (farmer != req.user.id) {
-      return res.status(400).send("Access danied!");
-    }
-    const user = await User.findOne({ username: farmer });
+    const farmer_id = req.user.id;
+    const user = await User.findOne({ _id: farmer_id });
     if (!user) {
       return res.status(404).send("No such farmer");
     }
-
-    const farms = await Farm.find({ farmer: user._id }).populate("farmer", "-password");
+    const farms = await Farm.find({ farmer: user._id });
 
     res.send(farms);
   } catch (err) {
@@ -133,7 +126,7 @@ exports.getAll = async (req, res) => {
   }
 };
 
-exports.deleteByID = async (req, res) => {
+exports.deleteFarm = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -144,7 +137,7 @@ exports.deleteByID = async (req, res) => {
     if (!farm) {
       return res.status(404).send("No such farm");
     }
-    if (farm.farmer !== req.user.id) {
+    if (farm.farmer.toString() !== req.user.id) {
       return res.status(400).send("Access danied!");
     }
     const deletedFarm = await Farm.deleteOne({ _id: id });

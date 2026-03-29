@@ -4,7 +4,7 @@ const Farm = require(`${__dirname}/../models/farm`);
 const Crop = require(`${__dirname}/../models/crop`);
 const User = require(`${__dirname}/../models/user`);
 
-exports.add = async (req, res) => {
+exports.addActivity = async (req, res) => {
   try {
     const { farm, crop, activity_type, quantity, unit, activity_date } = req.body;
 
@@ -60,7 +60,7 @@ exports.add = async (req, res) => {
   }
 };
 
-exports.modify = async (req, res) => {
+exports.modifyActivity = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -83,6 +83,9 @@ exports.modify = async (req, res) => {
       const existingFarm = await Farm.findById(farm);
       if (!existingFarm) {
         return res.status(404).send("No such farm");
+      }
+      if (farm.farmer.toString() !== req.user.id) {
+        return res.status(400).send("Access denied!");
       }
     }
 
@@ -138,20 +141,16 @@ exports.getByID = async (req, res) => {
       return res.status(400).send("Invalid ID");
     }
 
-    const farmActivity = await FarmActivity.findById(id)
-      .populate({
-        path: "farm",
-        populate: {
-          path: "farmer",
-          select: "-password",
-        },
-      })
-      .populate("crop");
+    const farmActivity = await FarmActivity.findById(id);
 
     if (!farmActivity) {
       return res.status(404).send("No such farm activity");
     }
 
+    const farm = await Farm.findById(farmActivity.farm);
+    if (farm.farmer.toString() !== req.user.id) {
+      return res.status(400).send("Access denied!");
+    }
     res.send(farmActivity);
   } catch (err) {
     console.log(err);
@@ -161,53 +160,45 @@ exports.getByID = async (req, res) => {
 
 exports.getAll = async (req, res) => {
   try {
-    const { farmer } = req.params;
+    const { farm_id } = req.params;
 
-    if (!farmer) {
-      return res.status(400).send("Invalid parameters");
+    if (!mongoose.Types.ObjectId.isValid(farm_id)) {
+      return res.status(400).send("Invalid ID");
     }
 
-    const user = await User.findOne({ username: farmer });
-    if (!user) {
-      return res.status(404).send("No such farmer");
+    const farm = await Farm.findById(farm_id);
+
+    if (!farm) {
+      return res.status(404).send("No such farm");
     }
 
-    const farms = await Farm.find({ farmer: user._id }).select("_id");
-    const farmIds = farms.map((farm) => farm._id);
-
-    const farmActivities = await FarmActivity.find({
-      farm: { $in: farmIds },
-    })
-      .populate({
-        path: "farm",
-        populate: {
-          path: "farmer",
-          select: "-password",
-        },
-      })
-      .populate("crop");
-
-    res.send(farmActivities);
+    if (farm.farmer.toString() !== req.user.id) {
+      return res.status(400).send("Access denied!");
+    }
+    const activities = await FarmActivity.find({ farm: farm_id });
+    res.send(activities);
   } catch (err) {
     console.log(err);
     res.status(500).send("Server Error");
   }
 };
 
-exports.deleteByID = async (req, res) => {
+exports.deleteActivity = async (req, res) => {
   try {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).send("Invalid ID");
     }
-
-    const deletedFarmActivity = await FarmActivity.deleteOne({ _id: id });
-
-    if (deletedFarmActivity.deletedCount === 0) {
-      return res.status(404).send("No such farm activity");
+    const farmActivity = await FarmActivity.findById(id);
+    if (!farmActivity) {
+      res.status(404).send("No such farm activity!");
     }
-
+    const farm = await Farm.findById(farmActivity.farm);
+    if (farm.farmer.toString() !== req.user.id) {
+      return res.status(400).send("Access denied!");
+    }
+    const deletedFarmActivity = await FarmActivity.deleteOne({ _id: id });
     res.send(deletedFarmActivity);
   } catch (err) {
     console.log(err);

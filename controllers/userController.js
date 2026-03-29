@@ -84,25 +84,9 @@ exports.register = async (req, res) => {
   }
 };
 
-exports.getAllUsers = async (req, res) => {
+exports.getUser = async (req, res) => {
   try {
-    if (req.user.role !== "admin") {
-      return res.status(403).send("Access Denied!");
-    }
-    const users = await User.find().select("-password");
-    res.send(users);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Server Error");
-  }
-};
-
-exports.getByUserName = async (req, res) => {
-  try {
-    const { username } = req.params;
-    if (!username) {
-      return res.status(400).send("Invalid parameters");
-    }
+    const { username } = req.user;
     const user = await User.findOne({ username: username }).select("-password");
 
     if (!user) {
@@ -114,11 +98,11 @@ exports.getByUserName = async (req, res) => {
     res.status(500).send("Server Error");
   }
 };
-exports.deleteMe = async (req, res) => {
+exports.deleteUser = async (req, res) => {
   try {
     const { password } = req.body;
     const { username } = req.user;
-    if (!username || !password) {
+    if (!password) {
       return res.status(400).send("Invalid parameters");
     }
 
@@ -141,7 +125,7 @@ exports.deleteMe = async (req, res) => {
   }
 };
 
-exports.update = async (req, res) => {
+exports.updateUser = async (req, res) => {
   try {
     const { current_password } = req.body;
     const current_username = req.user.username;
@@ -186,19 +170,6 @@ exports.update = async (req, res) => {
       expiresIn: "1d",
     });
     res.send(token);
-  } catch (err) {
-    console.log(err);
-    res.status(500).send("Server Error");
-  }
-};
-
-exports.deleteAll = async (req, res) => {
-  try {
-    if (req.user.role !== "admin") {
-      return res.status(403).send("Access Denied!");
-    }
-    await User.deleteMany({});
-    res.send("Done");
   } catch (err) {
     console.log(err);
     res.status(500).send("Server Error");

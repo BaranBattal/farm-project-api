@@ -3,7 +3,7 @@ const Orders = require(`${__dirname}/../models/orders`);
 const User = require(`${__dirname}/../models/user`);
 const Goods = require(`${__dirname}/../models/goods`);
 
-exports.add = async (req, res) => {
+exports.addOrder = async (req, res) => {
   try {
     const { good_id, buyer_id, quantity, unit_price, delivery_address } = req.body;
 
@@ -31,10 +31,10 @@ exports.add = async (req, res) => {
     if (quantity > good.quantity_available) {
       return res.send("not enough quantity");
     }
-    await Goods.apdateOne(
+    await Goods.updateOne(
       { _id: good_id },
       {
-        quantity_available: quantity_available - quantity,
+        quantity_available: good.quantity_available - quantity,
       },
     );
     const total_price = quantity * unit_price;
@@ -56,7 +56,7 @@ exports.add = async (req, res) => {
   }
 };
 
-exports.modify = async (req, res) => {
+exports.modifyOrder = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -70,7 +70,7 @@ exports.modify = async (req, res) => {
     if (!order) {
       return res.status(404).send("No such order");
     }
-    if (order.buyer_id !== req.user.id) {
+    if (order.buyer_id.toString() !== req.user.id) {
       return res.status(400).send("Access denied!");
     }
     const allowedStatus = ["pending", "accepted", "shipped", "delivered", "cancelled"];
@@ -90,7 +90,7 @@ exports.modify = async (req, res) => {
   }
 };
 
-exports.getByID = async (req, res) => {
+exports.getOrder = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -104,7 +104,7 @@ exports.getByID = async (req, res) => {
       return res.status(404).send("No such order");
     }
 
-    if (order.buyer_id !== req.user.id) {
+    if (order.buyer_id.toString() !== req.user.id) {
       return res.status(400).send("Access denied!");
     }
     res.send(order);
@@ -114,7 +114,7 @@ exports.getByID = async (req, res) => {
   }
 };
 
-exports.deleteByID = async (req, res) => {
+exports.deleteOrder = async (req, res) => {
   try {
     const { id } = req.params;
     if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -126,10 +126,10 @@ exports.deleteByID = async (req, res) => {
     if (!order) {
       return res.status(404).send("No such order");
     }
-    if (order.buyer_id !== req.user.id) {
+    if (order.buyer_id.toString() !== req.user.id) {
       return res.status(400).send("Access denied!");
     }
-    const deletedOrder = await Orders.deleteByID(id);
+    const deletedOrder = await Orders.deleteOne({ _id: id });
     res.send(deletedOrder);
   } catch (err) {
     console.log(err);

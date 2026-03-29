@@ -13,8 +13,7 @@ const farmSchema = new mongoose.Schema(
     },
     location: {
       lat: Number,
-      lng: Number,
-      required: true,
+      lon: Number,
     },
     size: {
       type: Number,

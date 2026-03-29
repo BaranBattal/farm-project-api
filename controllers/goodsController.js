@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const Goods = require(`${__dirname}/../models/goods`);
 const User = require(`${__dirname}/../models/user`);
 
-exports.add = async (req, res) => {
+exports.addGood = async (req, res) => {
   try {
     const { name, farmer, price, quantity_available, unit, status } = req.body;
 
@@ -53,7 +53,7 @@ exports.add = async (req, res) => {
   }
 };
 
-exports.modify = async (req, res) => {
+exports.modifyGood = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -90,7 +90,6 @@ exports.modify = async (req, res) => {
       { _id: id },
       {
         name: name || good.name,
-        farmer: farmer || good.farmer,
         price: price !== undefined ? price : good.price,
         quantity_available: quantity_available !== undefined ? quantity_available : good.quantity_available,
         unit: unit || good.unit,
@@ -126,7 +125,7 @@ exports.getByID = async (req, res) => {
   }
 };
 
-exports.getAllByFarmer = async (req, res) => {
+exports.getByFarmer = async (req, res) => {
   try {
     const { farmer } = req.params;
 
@@ -134,7 +133,7 @@ exports.getAllByFarmer = async (req, res) => {
       return res.status(400).send("Invalid parameters");
     }
 
-    const user = await User.findOne({ username: farmer });
+    const user = await User.findOne({ _id: farmer });
     if (!user) {
       return res.status(404).send("No such farmer");
     }
@@ -148,19 +147,19 @@ exports.getAllByFarmer = async (req, res) => {
   }
 };
 
-exports.deleteByID = async (req, res) => {
+exports.deleteGood = async (req, res) => {
   try {
     const { id } = req.params;
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).send("Invalid ID");
     }
-    const good = Goods.findOne({ _id: id });
+    const good = await Goods.findOne({ _id: id });
     if (!good) {
       res.status(404).send("No such good");
     }
-    if (req.user.id != good.farmer) {
-      res.status(400).send("Access danied!");
+    if (req.user.id !== good.farmer.toString()) {
+      return res.status(400).send("Access danied!");
     }
     const deletedGood = await Goods.deleteOne({ _id: id });
     res.send(deletedGood);
